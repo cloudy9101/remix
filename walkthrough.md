@@ -1,0 +1,42 @@
+- remix dev
+- remix-dev/cli
+- remix-dev/cli/run
+- remix-dev/cli/commands#dev
+  - app = express()
+  - config = readConfig(remixRoot || process.cwd())
+  - app.use(serve.createApp(config.serverBuildPath))
+- remix-serve/index#createApp
+  - app = express()
+  - app.use('/build', express.static('public/build')) // serve static build files
+  - app.use(express.static('public')) // serve static assets
+  - app.all('*', createRequestHandler({ build: require(buildPath) })) // buildPath = 'build/index.js'
+- remix-express/server.ts#createRequestHandler
+  - request = createRemixRequest(req)
+    - init = { method, headers, signal }
+    - new NodeRequest(url.href, init)
+  - handleRequest = createRemixRequestHandler(buildPath)
+    - remix-server-runtime/server.ts#createRequestHandler
+    - matches = matchServerRoutes(routes)
+    - if url.searchParams.has('_data) -> handleDataRequest
+    - if matches && !matches.last.route.module.default -> handleResourceRequest
+    - else handleDocumentRequest
+      - if isActionRequest(request) [method is 'post', 'patch', 'put', 'delete'] ->
+        - match = getRequestMatch() [matches.last]
+        - response = callRouteAction -> match.route.module.action()
+        - if isRedirectResponse(response) -> return response
+        - continue
+      - routeLoaderResponses = matches.map(match => match.route.module.loader ? callRouteLoader(match) : null)
+        - callRouteLoader -> match.route.module.loader()
+      - renderableMatches = getRenderableMatches(matches)
+      - handleDocumentRequest = build.entry.module.default
+      - return handleDocumentRequest(request.clone, responseStatusCode, responseHeaders, entryContext)
+  - response = handleRequest(request)
+  - sendRemixResponse(res, response)
+- watch -> remix-dev/cli/commands#watch
+  - compiler.watch(config)
+  - remix-dev/compiler.ts#watch
+    - buildEverything(config)
+      - createBrowserBuild(config)
+        - esbuild.build({})
+      - createServerBuild(config)
+        - esbuild.build({})
